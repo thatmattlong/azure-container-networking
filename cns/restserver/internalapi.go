@@ -206,6 +206,7 @@ func (service *HTTPRestService) SyncHostNCVersion(ctx context.Context, channelMo
 
 // This API will be called by CNS RequestController on CRD update.
 func (service *HTTPRestService) ReconcileNCState(ncRequest *cns.CreateNetworkContainerRequest, podInfoByIp map[string]cns.KubernetesPodInfo, scalar nnc.Scaler, spec nnc.NodeNetworkConfigSpec) int {
+	logger.Printf("Called ReconcileNCState  with ncReq: %+v, podInfoMap %+v, scalar %+v, spec %+v", ncRequest, podInfoByIp, scalar, spec)
 	// check if ncRequest is null, then return as there is no CRD state yet
 	if ncRequest == nil {
 		log.Logf("CNS starting with no NC state, podInfoMap count %d", len(podInfoByIp))

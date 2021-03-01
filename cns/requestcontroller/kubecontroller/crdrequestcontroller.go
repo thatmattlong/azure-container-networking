@@ -168,6 +168,7 @@ func (crdRC *crdRequestController) StartRequestController(exitChan <-chan struct
 
 // InitCNS initializes cns by passing pods and a createnetworkcontainerrequest
 func (crdRC *crdRequestController) initCNS() error {
+	logger.Printf("initCNS()")
 	var (
 		pods          *corev1.PodList
 		pod           corev1.Pod
@@ -196,6 +197,7 @@ func (crdRC *crdRequestController) initCNS() error {
 
 		// If instance of crd is not found, pass nil to CNSClient
 		if client.IgnoreNotFound(err) == nil {
+			logger.Printf("Calling ReconcileNCState 1")
 			return crdRC.CNSClient.ReconcileNCState(nil, nil, nodeNetConfig.Status.Scaler, nodeNetConfig.Spec)
 		}
 
@@ -206,6 +208,7 @@ func (crdRC *crdRequestController) initCNS() error {
 
 	// If there are no NCs, pass nil to CNSClient
 	if len(nodeNetConfig.Status.NetworkContainers) == 0 {
+		logger.Printf("Calling ReconcileNCState 2")
 		return crdRC.CNSClient.ReconcileNCState(nil, nil, nodeNetConfig.Status.Scaler, nodeNetConfig.Spec)
 	}
 
@@ -237,6 +240,7 @@ func (crdRC *crdRequestController) initCNS() error {
 	}
 
 	// Call cnsclient init cns passing those two things
+	logger.Printf("Calling ReconcileNCState 3")
 	return crdRC.CNSClient.ReconcileNCState(&ncRequest, podInfoByIP, nodeNetConfig.Status.Scaler, nodeNetConfig.Spec)
 
 }

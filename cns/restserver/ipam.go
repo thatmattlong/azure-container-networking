@@ -421,8 +421,10 @@ func requestIPConfigHelper(service *HTTPRestService, req cns.IPConfigRequest) (c
 
 	// check if ipconfig already allocated for this pod and return if exists or error
 	// if error, ipstate is nil, if exists, ipstate is not nil and error is nil
-	json.Unmarshal(req.OrchestratorContext, &podInfo)
+	json.Unmarshal(req.OrchestratorContext, &podInfo) // TODO: Swallowing error here, is that a problem?
+	logger.Printf("requestIPConfigHelper podInfo: %+v", podInfo)
 	if podIpInfo, isExist, err = service.GetExistingIPConfig(podInfo); err != nil || isExist {
+		logger.Printf("requestIPConfigHelper found existing podIPInfo %+v for podInfo %+v", podIpInfo, podInfo)
 		return podIpInfo, err
 	}
 
@@ -431,6 +433,9 @@ func requestIPConfigHelper(service *HTTPRestService, req cns.IPConfigRequest) (c
 		return service.AllocateDesiredIPConfig(podInfo, req.DesiredIPAddress, req.OrchestratorContext)
 	}
 
+	logger.Printf("requestIPConfigHelper getting new IPInfo for PodInfo %+v", podInfo)
 	// return any free IPConfig
-	return service.AllocateAnyAvailableIPConfig(podInfo, req.OrchestratorContext)
+	podIpInfo, err = service.AllocateAnyAvailableIPConfig(podInfo, req.OrchestratorContext)
+	logger.Printf("requestIPConfigHelper got PodIPInfo %+v for PodInfo %+v", podIpInfo, podInfo)
+	return podIpInfo, err
 }
