@@ -51,7 +51,7 @@ steps:
       sudo mv gsutil /usr/local/bin
     name: "installKubetest"
     displayName: "Set up Conformance Tests"
-  
+
   - script: |
       ls -lah
       pwd
@@ -111,7 +111,7 @@ steps:
 
   - task: AzureCLI@2
     inputs:
-      azureSubscription: "Azure Container Networking - Test"
+      azureSubscription: $(AZURE_TEST_AGENT_SERVICE_CONNECTION)
       scriptLocation: "inlineScript"
       scriptType: "bash"
       addSpnToEnvironment: true

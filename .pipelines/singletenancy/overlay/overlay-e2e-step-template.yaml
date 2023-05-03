@@ -56,7 +56,7 @@ steps:
     name: "installCilium"
     displayName: "Install Cilium on AKS Overlay"
 
-  - script: | 
+  - script: |
       echo "install cilium CLI"
       CILIUM_CLI_VERSION=$(curl -s https://raw.githubusercontent.com/cilium/cilium-cli/master/stable.txt)
       CLI_ARCH=amd64
@@ -129,7 +129,7 @@ steps:
       cilium connectivity test
     name: "ciliumConnectivityTests"
     displayName: "Run Cilium Connectivity Tests"
-  
+
   - script: |
       ARTIFACT_DIR=$(Build.ArtifactStagingDirectory)/test-output/
       echo $ARTIFACT_DIR
@@ -141,7 +141,7 @@ steps:
 
   - task: AzureCLI@2
     inputs:
-      azureSubscription: "Azure Container Networking - Test"
+      azureSubscription: $(AZURE_TEST_AGENT_SERVICE_CONNECTION)
       scriptLocation: "inlineScript"
       scriptType: "bash"
       addSpnToEnvironment: true
