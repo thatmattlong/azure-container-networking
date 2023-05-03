@@ -250,7 +250,7 @@ func TestUpdatePolicy(t *testing.T) {
 }
 
 func getBootupTestCalls() []testutils.TestCmd {
-	return append(policies.GetBootupTestCalls(), ipsets.GetResetTestCalls()...)
+	return append(policies.GetBootupTestCalls(true), ipsets.GetResetTestCalls()...)
 }
 
 func getAddPolicyTestCallsForDP(networkPolicy *policies.NPMNetworkPolicy) []testutils.TestCmd {
