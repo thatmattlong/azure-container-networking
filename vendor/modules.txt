@@ -94,6 +94,9 @@ github.com/Microsoft/hcsshim/osversion
 # github.com/avast/retry-go/v3 v3.1.1
 ## explicit; go 1.13
 github.com/avast/retry-go/v3
+# github.com/avast/retry-go/v4 v4.3.4
+## explicit; go 1.13
+github.com/avast/retry-go/v4
 # github.com/beorn7/perks v1.0.1
 ## explicit; go 1.11
 github.com/beorn7/perks/quantile
@@ -415,7 +418,7 @@ github.com/spf13/viper/internal/encoding/javaproperties
 github.com/spf13/viper/internal/encoding/json
 github.com/spf13/viper/internal/encoding/toml
 github.com/spf13/viper/internal/encoding/yaml
-# github.com/stretchr/testify v1.8.1
+# github.com/stretchr/testify v1.8.2
 ## explicit; go 1.13
 github.com/stretchr/testify/assert
 github.com/stretchr/testify/require
