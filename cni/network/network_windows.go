@@ -400,3 +400,25 @@ func platformInit(cniConfig *cni.NetworkConfig) {
 		network.EnableHnsV2Timeout(cniConfig.WindowsSettings.HnsTimeoutDurationInSeconds)
 	}
 }
+
+// isDualNicFeatureSupported returns if the dual nic feature is supported. Currently it's only supported for windows hnsv2 path
+func (plugin *NetPlugin) isDualNicFeatureSupported(netNs string) bool {
+	useHnsV2, err := network.UseHnsV2(netNs)
+	if useHnsV2 && err == nil {
+		return true
+	}
+	log.Errorf("DualNicFeature is not supported")
+	return false
+}
+
+func getOverlayGateway(podsubnet *net.IPNet) (net.IP, error) {
+	log.Printf("WARN: No gateway specified for Overlay NC. CNI will choose one, but connectivity may break.")
+	ncgw := podsubnet.IP
+	ncgw[3]++
+	ncgw = net.ParseIP(ncgw.String())
+	if ncgw == nil || !podsubnet.Contains(ncgw) {
+		return nil, errors.Wrap(errInvalidArgs, "%w: Failed to retrieve overlay gateway from podsubnet"+podsubnet.IP.String())
+	}
+
+	return ncgw, nil
+}
