@@ -55,7 +55,7 @@ steps:
     name: "installCilium"
     displayName: "Install Cilium on AKS Overlay"
 
-  - script: | 
+  - script: |
       echo "install cilium CLI"
       CILIUM_CLI_VERSION=$(curl -s https://raw.githubusercontent.com/cilium/cilium-cli/master/stable.txt)
       CLI_ARCH=amd64
@@ -143,7 +143,14 @@ steps:
       bash hack/scripts/validate_state.sh
     name: "validatePods"
     displayName: "Validate Pods"
-  
+
+  - script: |
+      echo "Run wireserver and metadata connectivity Tests"
+      bash test/network/wireserver_metadata_test.sh
+    retryCountOnTaskFailure: 3
+    name: "WireserverMetadataConnectivityTests"
+    displayName: "Run Wireserver and Metadata Connectivity Tests"
+
   - script: |
       ARTIFACT_DIR=$(Build.ArtifactStagingDirectory)/test-output/
       echo $ARTIFACT_DIR
