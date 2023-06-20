@@ -498,6 +498,7 @@ func (service *HTTPRestService) GetExistingIPConfig(podInfo cns.PodInfo) (cns.Po
 		return podIpInfo, isExist, fmt.Errorf("Failed to get existing ipconfig. Pod to IPID exists, but IPID to IPConfig doesn't exist, CNS State potentially corrupt")
 	}
 
+	logger.Printf("[GetExistingIPConfig] IPConfigExists [%t] for pod [%s]", isExist, podInfo)
 	return podIpInfo, isExist, nil
 }
 
