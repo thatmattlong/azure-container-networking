@@ -479,11 +479,22 @@ IMAGE_ARCHIVE_DIR ?= $(shell pwd)
 
 manifest-create: # util target to compose multiarch container manifests from platform specific images.
 	$(CONTAINER_BUILDER) manifest create $(IMAGE_REGISTRY)/$(IMAGE):$(TAG)
-	$(foreach PLATFORM,$(PLATFORMS),                                                                                                                                        \
-		$(if $(filter $(PLATFORM),windows/amd64),                                                                                                                           \
-			$(CONTAINER_BUILDER) manifest add --os-version=$(WINVER) $(IMAGE_REGISTRY)/$(IMAGE):$(TAG) docker://$(IMAGE_REGISTRY)/$(IMAGE):$(subst /,-,$(PLATFORM))-$(TAG); \
-		,                                                                                                                                                                   \
-			$(CONTAINER_BUILDER) manifest add $(IMAGE_REGISTRY)/$(IMAGE):$(TAG) docker://$(IMAGE_REGISTRY)/$(IMAGE):$(subst /,-,$(PLATFORM))-$(TAG);))
+
+manifest-add:
+	$(CONTAINER_BUILDER) manifest add --os=$(OS) --os-version=$($(OS_VERSION)) $(IMAGE_REGISTRY)/$(IMAGE):$(TAG) docker://$(IMAGE_REGISTRY)/$(IMAGE):$(subst /,-,$(PLATFORM))$(if $(OS_VERSION),-$(OS_VERSION),)-$(TAG)
+
+manifest-build: # util target to compose multiarch container manifests from platform specific images.
+	$(MAKE) manifest-create
+	$(foreach PLATFORM,$(PLATFORMS),\
+		$(if $(filter $(PLATFORM),windows/amd64),\
+			$(foreach OS_VERSION,$(OS_VERSIONS),\
+				$(MAKE) manifest-add CONTAINER_BUILDER=$(CONTAINER_BUILDER) OS=windows OS_VERSION=$(OS_VERSION) PLATFORM=$(PLATFORM);\
+			),\
+			$(MAKE) manifest-add PLATFORM=$(PLATFORM);\
+		)\
+	)\
+
+
 
 manifest-push: # util target to push multiarch container manifest.
 	$(CONTAINER_BUILDER) manifest push --all $(IMAGE_REGISTRY)/$(IMAGE):$(TAG) docker://$(IMAGE_REGISTRY)/$(IMAGE):$(TAG)
