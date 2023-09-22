@@ -29,10 +29,11 @@ steps:
       scriptType: "bash"
       addSpnToEnvironment: true
       inlineScript: |
+        set -e
         mkdir -p ~/.kube/
         echo "Create AKS cluster"
-        make -C ./hack/swift azcfg AZCLI=az REGION=$(REGION_AKS_CLUSTER_TEST)
-        make -C ./hack/swift byocni-up AZCLI=az REGION=$(REGION_AKS_CLUSTER_TEST) SUB=$(SUB_AZURE_NETWORK_AGENT_TEST) CLUSTER=${{ parameters.clusterName }}-$(make revision) VM_SIZE=Standard_B2ms
+        make -C ./hack/aks azcfg AZCLI=az REGION=$(REGION_AKS_CLUSTER_TEST)
+        make -C ./hack/aks swift-no-kube-proxy-up AZCLI=az REGION=$(REGION_AKS_CLUSTER_TEST) SUB=$(SUB_AZURE_NETWORK_AGENT_TEST) CLUSTER=${{ parameters.clusterName }}-$(make revision) VM_SIZE=Standard_B2ms
         echo "Cluster successfully created"
     displayName: Create test cluster
     condition: succeeded()
@@ -48,7 +49,9 @@ steps:
       echo "deploy Cilium ConfigMap"
       kubectl apply -f cilium/configmap.yaml
       kubectl apply -f test/integration/manifests/cilium/cilium-config.yaml
-      echo "install Cilium"
+      echo "install Cilium ${CILIUM_VERSION_TAG}"
+      envsubst '${CILIUM_VERSION_TAG},${CILIUM_IMAGE_REGISTRY}' < test/integration/manifests/cilium/daemonset.yaml | kubectl apply -f -
+      envsubst '${CILIUM_VERSION_TAG},${CILIUM_IMAGE_REGISTRY}' < test/integration/manifests/cilium/deployment.yaml | kubectl apply -f -
       kubectl apply -f test/integration/manifests/cilium/cilium-agent
       kubectl apply -f test/integration/manifests/cilium/cilium-operator
       kubectl get po -owide -A
@@ -111,6 +114,15 @@ steps:
     condition: always()
 
   - script: |
+      kubectl get pods -A
+      echo "Waiting < 2 minutes for cilium to be ready"
+      # Ensure Cilium is ready Xm\Xs
+      cilium status --wait --wait-duration 2m
+    retryCountOnTaskFailure: 3
+    name: "CiliumStatus"
+    displayName: "Cilium Status"
+
+  - script: |
       echo "Run Service Conformance E2E"
       export PATH=${PATH}:/usr/local/bin/gsutil
       KUBECONFIG=~/.kube/config kubetest2 noop \
@@ -129,13 +141,12 @@ steps:
 
   - script: |
       echo "validate pod IP assignment and check systemd-networkd restart"
-      kubectl apply -f hack/manifests/hostprocess.yaml
       kubectl get pod -owide -A
-      bash hack/scripts/validate_state.sh
+      make test-validate-state
       echo "delete cilium connectivity test resources and re-validate state"
       kubectl delete ns cilium-test
       kubectl get pod -owide -A
-      bash hack/scripts/validate_state.sh
+      make test-validate-state
     name: "validatePods"
     displayName: "Validate Pods"
 
@@ -175,9 +186,10 @@ steps:
       scriptType: "bash"
       addSpnToEnvironment: true
       inlineScript: |
+        set -e
         echo "Deleting cluster"
-        make -C ./hack/swift azcfg AZCLI=az REGION=$(REGION_AKS_CLUSTER_TEST)
-        make -C ./hack/swift down AZCLI=az REGION=$(REGION_AKS_CLUSTER_TEST) SUB=$(SUB_AZURE_NETWORK_AGENT_TEST) CLUSTER=${{ parameters.clusterName }}-$(make revision)
+        make -C ./hack/aks azcfg AZCLI=az REGION=$(REGION_AKS_CLUSTER_TEST)
+        make -C ./hack/aks down AZCLI=az REGION=$(REGION_AKS_CLUSTER_TEST) SUB=$(SUB_AZURE_NETWORK_AGENT_TEST) CLUSTER=${{ parameters.clusterName }}-$(make revision)
         echo "Cluster and resources down"
     name: "Cleanupcluster"
     displayName: "Cleanup cluster"
