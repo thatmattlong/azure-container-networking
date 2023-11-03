@@ -4,7 +4,6 @@
 package network
 
 import (
-	"errors"
 	"fmt"
 	"net"
 	"strconv"
@@ -17,6 +16,7 @@ import (
 	"github.com/Azure/azure-container-networking/network/networkutils"
 	"github.com/Azure/azure-container-networking/ovsctl"
 	"github.com/Azure/azure-container-networking/platform"
+	"github.com/pkg/errors"
 	"golang.org/x/sys/unix"
 )
 
@@ -39,6 +39,8 @@ const (
 	LocalIPKey = "localIP"
 	// InfraVnetIPKey key for infra vnet
 	InfraVnetIPKey = "infraVnetIP"
+	// Ubuntu Release Version for checking which command to use.
+	Ubuntu22 = "22.04"
 )
 
 const (
@@ -152,7 +154,7 @@ func (nm *networkManager) deleteNetworkImpl(nw *network) error {
 	return nil
 }
 
-//  SaveIPConfig saves the IP configuration of an interface.
+// SaveIPConfig saves the IP configuration of an interface.
 func (nm *networkManager) saveIPConfig(hostIf *net.Interface, extIf *externalInterface) error {
 	// Save the default routes on the interface.
 	routes, err := nm.netlink.GetIPRoute(&netlink.Route{Dst: &net.IPNet{}, LinkIndex: hostIf.Index})
@@ -243,14 +245,73 @@ func isGreaterOrEqaulUbuntuVersion(versionToMatch int) bool {
 	return false
 }
 
+func systemVersion() (string, error) {
+	p := platform.NewExecClient()
+	osVersion, err := p.ExecuteCommand("lsb_release -rs")
+	if err != nil {
+		return osVersion, errors.Wrap(err, "error retrieving the system distribution version")
+	}
+	return osVersion, nil
+}
+
+func addDomain(ifName, domain string) (string, error) {
+	osVersion, err := systemVersion()
+	if err != nil {
+		return osVersion, err
+	}
+
+	var cmd string
+	switch {
+	case strings.HasPrefix(osVersion, Ubuntu22):
+		cmd = fmt.Sprintf("resolvectl domain %s %s", ifName, domain)
+	default:
+		cmd = fmt.Sprintf("systemd-resolve --interface %s --set-domain %s", ifName, domain)
+	}
+	return cmd, nil
+}
+
+func addDNSServers(ifName string, dnsServers []string) (string, error) {
+	osVersion, err := systemVersion()
+	if err != nil {
+		return osVersion, err
+	}
+
+	var cmd string
+	switch {
+	case strings.HasPrefix(osVersion, Ubuntu22):
+		cmd = fmt.Sprintf("resolvectl dns %s %s", ifName, strings.Join(dnsServers, " "))
+	default:
+		cmd = fmt.Sprintf("systemd-resolve --interface %s %s", ifName, strings.Join(dnsServers, "--set-dns "))
+	}
+	return cmd, nil
+}
+
+func ifNameStatus(ifName string) (string, error) {
+	osVersion, err := systemVersion()
+	if err != nil {
+		return osVersion, err
+	}
+	var cmd string
+	switch {
+	case strings.HasPrefix(osVersion, Ubuntu22):
+		cmd = fmt.Sprintf("resolvectl status %s", ifName)
+	default:
+		cmd = fmt.Sprintf("systemd-resolve --status %s", ifName)
+	}
+	return cmd, nil
+}
+
 func readDnsInfo(ifName string) (DNSInfo, error) {
 	var dnsInfo DNSInfo
 
 	p := platform.NewExecClient()
-	cmd := fmt.Sprintf("systemd-resolve --status %s", ifName)
+	cmd, err := ifNameStatus(ifName)
+	if err != nil {
+		return dnsInfo, errors.Wrap(err, "Error generating interface name status cmd")
+	}
 	out, err := p.ExecuteCommand(cmd)
 	if err != nil {
-		return dnsInfo, err
+		return dnsInfo, errors.Wrapf(err, "Error executing interface status with cmd %s", cmd)
 	}
 
 	log.Printf("[net] console output for above cmd: %s", out)
@@ -333,7 +394,8 @@ func (nm *networkManager) applyIPConfig(extIf *externalInterface, targetIf *net.
 
 func applyDnsConfig(extIf *externalInterface, ifName string) error {
 	var (
-		setDnsList string
+		setDNSList []string
+		cmd        string
 		err        error
 	)
 	p := platform.NewExecClient()
@@ -345,21 +407,31 @@ func applyDnsConfig(extIf *externalInterface, ifName string) error {
 				continue
 			}
 
-			buf := fmt.Sprintf("--set-dns=%s", server)
-			setDnsList = setDnsList + " " + buf
+			setDNSList = append(setDNSList, server)
 		}
 
-		if setDnsList != "" {
-			cmd := fmt.Sprintf("systemd-resolve --interface=%s%s", ifName, setDnsList)
+		if len(setDNSList) > 0 {
+			cmd, err = addDNSServers(ifName, setDNSList)
+			if err != nil {
+				return errors.Wrap(err, "Error generating add DNS Servers cmd")
+			}
+
 			_, err = p.ExecuteCommand(cmd)
 			if err != nil {
-				return err
+				return errors.Wrapf(err, "Error executing add DNS Servers with cmd %s", cmd)
 			}
 		}
 
 		if extIf.DNSInfo.Suffix != "" {
-			cmd := fmt.Sprintf("systemd-resolve --interface=%s --set-domain=%s", ifName, extIf.DNSInfo.Suffix)
+			cmd, err = addDomain(ifName, extIf.DNSInfo.Suffix)
+			if err != nil {
+				return errors.Wrap(err, "Error generating add domain cmd")
+			}
+
 			_, err = p.ExecuteCommand(cmd)
+			if err != nil {
+				return errors.Wrapf(err, "Error executing add Domain with cmd %s", cmd)
+			}
 		}
 
 	}
