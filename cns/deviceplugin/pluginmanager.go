@@ -128,7 +128,7 @@ func (p *PluginManager) cleanOldState() error {
 			// try to delete it
 			f := path.Join(p.options.devicePluginDirectory, entry.Name())
 			if err := os.Remove(f); err != nil {
-				return errors.Wrapf(err, "error removing old socket %s", f)
+				return errors.Wrapf(err, "error removing old socket %q", f)
 			}
 		}
 	}
