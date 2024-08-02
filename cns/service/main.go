@@ -748,8 +748,10 @@ func main() {
 		Logger:     logger.Log,
 	}
 
+	imdsClient := imds.NewClient()
+
 	httpRemoteRestService, err := restserver.NewHTTPRestService(&config, wsclient, &wsProxy, nmaClient,
-		endpointStateStore, conflistGenerator, homeAzMonitor)
+		endpointStateStore, conflistGenerator, homeAzMonitor, imdsClient)
 	if err != nil {
 		logger.Errorf("Failed to create CNS object, err:%v.\n", err)
 		return
@@ -872,6 +874,12 @@ func main() {
 			logger.Printf("Fetching backend nics for the node")
 			if err = httpRemoteRestService.SavePnpIDMacaddressMapping(rootCtx); err != nil {
 				logger.Errorf("Failed to fetch PnpIDMacaddress mapping: %v", err)
+			}
+
+			// No-op for linux, setting primary macaddress if VF is enabled on the nics for aks swiftv2 windows
+			logger.Printf("Setting VF for accelnet nics if feature is enabled (only on windows VM & swiftV2 scenario)")
+			if err = httpRemoteRestService.SetVFForAccelnetNICs(); err != nil {
+				logger.Errorf("Failed to set VF for accelnet NICs: %v", err)
 			}
 		}
 	}

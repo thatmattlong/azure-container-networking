@@ -28,6 +28,7 @@ type CNSConfig struct {
 	EnableAsyncPodDelete        bool
 	EnableCNIConflistGeneration bool
 	EnableIPAMv2                bool
+	EnableK8sDevicePlugin       bool
 	EnablePprof                 bool
 	EnableStateMigration        bool
 	EnableSubnetScarcity        bool
