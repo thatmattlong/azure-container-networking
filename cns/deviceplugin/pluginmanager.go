@@ -18,8 +18,9 @@ import (
 var ErrUnknownDeviceType = errors.New("unknown device type")
 
 const (
-	defaultDevicePluginDirectory = "/var/lib/kubelet/device-plugins"
-	defaultDeviceCheckInterval   = 5 * time.Second
+	defaultDevicePluginDirectory      = "/var/lib/kubelet/device-plugins"
+	defaultDeviceCheckInterval        = 5 * time.Second
+	defaultServerCountForDevicePlugin = 2 // Number of device types supported
 )
 
 type pluginManagerOptions struct {
@@ -51,12 +52,12 @@ func PluginDeviceCheckInterval(i time.Duration) func(*pluginManagerOptions) {
 // PluginManager runs device plugins for vnet nics and ib nics
 type PluginManager struct {
 	Logger        *zap.Logger
-	VnetNICPlugin *plugin
-	IBNICPlugin   *plugin
+	VnetNICPlugin *Plugin
+	IBNICPlugin   *Plugin
 	options       pluginManagerOptions
 }
 
-func NewPluginManager(l *zap.Logger, initialVnetNICCount int, initialIBNICCount int, opts ...pluginManagerOption) *PluginManager {
+func NewPluginManager(l *zap.Logger, initialVnetNICCount, initialIBNICCount int, opts ...pluginManagerOption) *PluginManager {
 	logger := l.With(zap.String("component", "devicePlugin"))
 	socketWatcher := NewSocketWatcher(logger)
 	options := pluginManagerOptions{
@@ -88,7 +89,7 @@ func (p *PluginManager) Run(ctx context.Context) error {
 	}
 
 	var wg sync.WaitGroup
-	wg.Add(2) // starting two goroutines to wait on
+	wg.Add(defaultServerCountForDevicePlugin) // starting two goroutines to wait on
 	go func() {
 		defer wg.Done()
 		p.VnetNICPlugin.Run(ctx)

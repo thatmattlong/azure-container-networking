@@ -11,13 +11,13 @@ import (
 
 const defaultStatInterval time.Duration = 5 * time.Second
 
-type socketWatcherOption func(*socketWatcherOptions)
+type SocketWatcherOption func(*socketWatcherOptions)
 
 type socketWatcherOptions struct {
 	statInterval time.Duration
 }
 
-func SocketWatcherStatInterval(d time.Duration) socketWatcherOption {
+func SocketWatcherStatInterval(d time.Duration) SocketWatcherOption {
 	return func(o *socketWatcherOptions) {
 		o.statInterval = d
 	}
@@ -30,17 +30,17 @@ type SocketWatcher struct {
 	options     socketWatcherOptions
 }
 
-func NewSocketWatcher(logger *zap.Logger, opts ...socketWatcherOption) *SocketWatcher {
-	socketWatcherOptions := socketWatcherOptions{
+func NewSocketWatcher(logger *zap.Logger, opts ...SocketWatcherOption) *SocketWatcher {
+	defaultOptions := socketWatcherOptions{
 		statInterval: defaultStatInterval,
 	}
 	for _, o := range opts {
-		o(&socketWatcherOptions)
+		o(&defaultOptions)
 	}
 	return &SocketWatcher{
 		socketChans: make(map[string]chan struct{}),
 		logger:      logger,
-		options:     socketWatcherOptions,
+		options:     defaultOptions,
 	}
 }
 

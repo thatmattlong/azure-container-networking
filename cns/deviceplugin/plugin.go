@@ -9,14 +9,13 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 )
 
-type plugin struct {
+type Plugin struct {
 	Logger              *zap.Logger
 	ResourceName        string
 	SocketWatcher       *SocketWatcher
@@ -29,8 +28,8 @@ type plugin struct {
 
 func NewPlugin(l *zap.Logger, resourceName string, socketWathcer *SocketWatcher, socket string,
 	initialDeviceCount int, kubeletSocket string, deviceCheckInterval time.Duration,
-) *plugin {
-	return &plugin{
+) *Plugin {
+	return &Plugin{
 		Logger:              l.With(zap.String("resourceName", resourceName)),
 		ResourceName:        resourceName,
 		SocketWatcher:       socketWathcer,
@@ -42,7 +41,7 @@ func NewPlugin(l *zap.Logger, resourceName string, socketWathcer *SocketWatcher,
 }
 
 // Run runs the plugin until the context is cancelled, restarting the server as needed
-func (p *plugin) Run(ctx context.Context) {
+func (p *Plugin) Run(ctx context.Context) {
 	defer p.mustCleanUp()
 	for {
 		select {
@@ -57,12 +56,12 @@ func (p *plugin) Run(ctx context.Context) {
 	}
 }
 
-func (p *plugin) run(ctx context.Context) error {
+func (p *Plugin) run(ctx context.Context) error {
 	childCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
 	s := NewServer(p.Socket, p.Logger, p, p.deviceCheckInterval)
-	runErrChan := make(chan error, 2)
+	runErrChan := make(chan error, ErrorChanCapacity)
 	go func(errChan chan error) {
 		if err := s.Run(childCtx); err != nil {
 			errChan <- err
@@ -70,7 +69,7 @@ func (p *plugin) run(ctx context.Context) error {
 	}(runErrChan)
 
 	// wait till the server is ready before registering with kubelet
-	readyErrChan := make(chan error, 2)
+	readyErrChan := make(chan error, ErrorChanCapacity)
 	go func(errChan chan error) {
 		errChan <- s.Ready(childCtx)
 	}(readyErrChan)
@@ -97,7 +96,8 @@ func (p *plugin) run(ctx context.Context) error {
 	return nil
 }
 
-func (p *plugin) registerWithKubelet(ctx context.Context) error {
+//nolint:staticcheck // TODO: Move to grpc.NewClient method
+func (p *Plugin) registerWithKubelet(ctx context.Context) error {
 	conn, err := grpc.Dial(p.kubeletSocket, grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithContextDialer(func(ctx context.Context, addr string) (net.Conn, error) {
 			d := &net.Dialer{}
@@ -120,20 +120,20 @@ func (p *plugin) registerWithKubelet(ctx context.Context) error {
 	return nil
 }
 
-func (p *plugin) mustCleanUp() {
+func (p *Plugin) mustCleanUp() {
 	p.Logger.Info("cleaning up device plugin")
 	if err := os.Remove(p.Socket); err != nil && !os.IsNotExist(err) {
 		p.Logger.Panic("failed to remove socket", zap.Error(err))
 	}
 }
 
-func (p *plugin) UpdateDeviceCount(count int) {
+func (p *Plugin) UpdateDeviceCount(count int) {
 	p.deviceCountMutex.Lock()
 	defer p.deviceCountMutex.Unlock()
 	p.deviceCount = count
 }
 
-func (p *plugin) getDeviceCount() int {
+func (p *Plugin) getDeviceCount() int {
 	p.deviceCountMutex.Lock()
 	defer p.deviceCountMutex.Unlock()
 	return p.deviceCount

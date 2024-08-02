@@ -31,8 +31,8 @@ func TestPluginManagerStartStop(t *testing.T) {
 	ibPluginRegisterChan := make(chan string)
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
-		err := runFakeKubelet(ctx, kubeletSocket, vnetPluginRegisterChan, ibPluginRegisterChan, fakeKubeletSocketDir)
-		kubeletErrChan <- err
+		kubeletErr := runFakeKubelet(ctx, kubeletSocket, vnetPluginRegisterChan, ibPluginRegisterChan, fakeKubeletSocketDir)
+		kubeletErrChan <- kubeletErr
 	}()
 
 	// run the plugin manager
@@ -65,8 +65,14 @@ func TestPluginManagerStartStop(t *testing.T) {
 	// update the device counts and assert they match expected after some time
 	expectedVnetNICs = 5
 	expectedIBNICs = 6
-	manager.TrackDevices(v1alpha1.DeviceTypeVnetNIC, expectedVnetNICs)
-	manager.TrackDevices(v1alpha1.DeviceTypeInfiniBandNIC, expectedIBNICs)
+	if err = manager.TrackDevices(v1alpha1.DeviceTypeVnetNIC, expectedVnetNICs); err != nil {
+		t.Fatalf("error tracking VNET devices: %v", err)
+	}
+
+	if err = manager.TrackDevices(v1alpha1.DeviceTypeInfiniBandNIC, expectedIBNICs); err != nil {
+		t.Fatalf("error tracking IB devices: %v", err)
+	}
+
 	<-time.After(3 * time.Second)
 	gotVnetNICCount = getDeviceCount(t, vnetPluginEndpoint)
 	if gotVnetNICCount != expectedVnetNICs {
@@ -75,6 +81,38 @@ func TestPluginManagerStartStop(t *testing.T) {
 	gotIBNICCount = getDeviceCount(t, ibPluginEndpoint)
 	if gotIBNICCount != expectedIBNICs {
 		t.Fatalf("expected %d ib nics but got %d", expectedIBNICs, gotIBNICCount)
+	}
+
+	// call allocate method and check the response
+	req := &v1beta1.AllocateRequest{
+		ContainerRequests: []*v1beta1.ContainerAllocateRequest{
+			{
+				DevicesIDs: []string{"device-0", "device-1"},
+			},
+		},
+	}
+	allocateResp := getAllocateResponse(t, vnetPluginEndpoint, req)
+
+	if len(allocateResp.ContainerResponses[0].Envs) != len(req.ContainerRequests[0].DevicesIDs) {
+		t.Fatalf("expected allocations %v but received allocations %v", len(req.ContainerRequests[0].DevicesIDs), len(allocateResp.ContainerResponses[0].Envs))
+	}
+
+	// call getDevicePluginOptions method
+	_, err = getDevicePluginOptionsResponse(t, vnetPluginEndpoint)
+	if err != nil {
+		t.Fatalf("error calling getDevicePluginOptions: %v", err)
+	}
+
+	// call getPreferredAllocation method
+	_, err = getPreferredAllocationResponse(t, vnetPluginEndpoint)
+	if err != nil {
+		t.Fatalf("error calling getPreferredAllocation: %v", err)
+	}
+
+	// call preStartContainer method
+	_, err = getPreStartContainerResponse(t, vnetPluginEndpoint)
+	if err != nil {
+		t.Fatalf("error calling PreStartContainer: %v", err)
 	}
 
 	// shut down the plugin manager and fake kubelet
@@ -138,6 +176,7 @@ func runFakeKubelet(ctx context.Context, address string, vnetPluginRegisterChan,
 	return nil
 }
 
+//nolint:staticcheck // TODO: Move to grpc.NewClient method
 func getDeviceCount(t *testing.T, pluginAddress string) int {
 	conn, err := grpc.Dial(pluginAddress, grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithContextDialer(func(ctx context.Context, addr string) (net.Conn, error) {
@@ -161,4 +200,84 @@ func getDeviceCount(t *testing.T, pluginAddress string) int {
 	}
 
 	return len(resp.Devices)
+}
+
+//nolint:staticcheck // TODO: Move to grpc.NewClient method
+func getAllocateResponse(t *testing.T, pluginAddress string, req *v1beta1.AllocateRequest) *v1beta1.AllocateResponse {
+	conn, err := grpc.Dial(pluginAddress, grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithContextDialer(func(ctx context.Context, addr string) (net.Conn, error) {
+			d := &net.Dialer{}
+			return d.DialContext(ctx, "unix", addr)
+		}))
+	if err != nil {
+		t.Fatalf("error connecting to fake kubelet: %v", err)
+	}
+	defer conn.Close()
+
+	client := v1beta1.NewDevicePluginClient(conn)
+	resp, err := client.Allocate(context.Background(), req)
+	if err != nil {
+		t.Fatalf("error from Allocate: %v", err)
+	}
+	return resp
+}
+
+//nolint:staticcheck // TODO: Move to grpc.NewClient method
+func getDevicePluginOptionsResponse(t *testing.T, pluginAddress string) (*v1beta1.DevicePluginOptions, error) {
+	conn, err := grpc.Dial(pluginAddress, grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithContextDialer(func(ctx context.Context, addr string) (net.Conn, error) {
+			d := &net.Dialer{}
+			return d.DialContext(ctx, "unix", addr)
+		}))
+	if err != nil {
+		t.Fatalf("error connecting to fake kubelet: %v", err)
+	}
+	defer conn.Close()
+
+	client := v1beta1.NewDevicePluginClient(conn)
+	resp, err := client.GetDevicePluginOptions(context.Background(), &v1beta1.Empty{})
+	if err != nil {
+		return nil, errors.Wrapf(err, "error calling GetDevicePluginOptions")
+	}
+	return resp, nil
+}
+
+//nolint:staticcheck // TODO: Move to grpc.NewClient method
+func getPreferredAllocationResponse(t *testing.T, pluginAddress string) (*v1beta1.PreferredAllocationResponse, error) {
+	conn, err := grpc.Dial(pluginAddress, grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithContextDialer(func(ctx context.Context, addr string) (net.Conn, error) {
+			d := &net.Dialer{}
+			return d.DialContext(ctx, "unix", addr)
+		}))
+	if err != nil {
+		t.Fatalf("error connecting to fake kubelet: %v", err)
+	}
+	defer conn.Close()
+
+	client := v1beta1.NewDevicePluginClient(conn)
+	resp, err := client.GetPreferredAllocation(context.Background(), &v1beta1.PreferredAllocationRequest{})
+	if err != nil {
+		return nil, errors.Wrapf(err, "error calling GetPreferredAllocation")
+	}
+	return resp, nil
+}
+
+//nolint:staticcheck // TODO: Move to grpc.NewClient method
+func getPreStartContainerResponse(t *testing.T, pluginAddress string) (*v1beta1.PreStartContainerResponse, error) {
+	conn, err := grpc.Dial(pluginAddress, grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithContextDialer(func(ctx context.Context, addr string) (net.Conn, error) {
+			d := &net.Dialer{}
+			return d.DialContext(ctx, "unix", addr)
+		}))
+	if err != nil {
+		t.Fatalf("error connecting to fake kubelet: %v", err)
+	}
+	defer conn.Close()
+
+	client := v1beta1.NewDevicePluginClient(conn)
+	resp, err := client.PreStartContainer(context.Background(), &v1beta1.PreStartContainerRequest{})
+	if err != nil {
+		return nil, errors.Wrapf(err, "error calling PreStartContainer")
+	}
+	return resp, nil
 }

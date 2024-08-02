@@ -13,11 +13,13 @@ import (
 	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 )
 
+const ErrorChanCapacity = 2
+
 type deviceCounter interface {
 	getDeviceCount() int
 }
 
-type server struct {
+type Server struct {
 	address              string
 	logger               *zap.Logger
 	deviceCounter        deviceCounter
@@ -25,8 +27,8 @@ type server struct {
 	deviceCheckInterval  time.Duration
 }
 
-func NewServer(address string, logger *zap.Logger, deviceCounter deviceCounter, deviceCheckInterval time.Duration) *server {
-	return &server{
+func NewServer(address string, logger *zap.Logger, deviceCounter deviceCounter, deviceCheckInterval time.Duration) *Server {
+	return &Server{
 		address:              address,
 		logger:               logger,
 		deviceCounter:        deviceCounter,
@@ -36,7 +38,7 @@ func NewServer(address string, logger *zap.Logger, deviceCounter deviceCounter, 
 }
 
 // Run starts the grpc server and blocks until an error or context is cancelled. Wait on Ready to know when the server is ready.
-func (s *server) Run(ctx context.Context) error {
+func (s *Server) Run(ctx context.Context) error {
 	grpcServer := grpc.NewServer()
 	v1beta1.RegisterDevicePluginServer(grpcServer, s)
 	defer close(s.listAndWatchDoneChan)
@@ -45,7 +47,7 @@ func (s *server) Run(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "error listening on socket")
 	}
-	errChan := make(chan error, 2)
+	errChan := make(chan error, ErrorChanCapacity)
 	go func() {
 		errChan <- grpcServer.Serve(l)
 	}()
@@ -60,7 +62,9 @@ func (s *server) Run(ctx context.Context) error {
 }
 
 // Ready blocks until the server is ready
-func (s *server) Ready(ctx context.Context) error {
+//
+//nolint:staticcheck // TODO: Move to grpc.NewClient method
+func (s *Server) Ready(ctx context.Context) error {
 	c, err := grpc.DialContext(ctx, s.address, grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock(),
 		grpc.WithContextDialer(func(ctx context.Context, addr string) (net.Conn, error) {
 			return (&net.Dialer{}).DialContext(ctx, "unix", addr)
@@ -75,7 +79,7 @@ func (s *server) Ready(ctx context.Context) error {
 	return nil
 }
 
-func (s *server) Allocate(ctx context.Context, req *v1beta1.AllocateRequest) (*v1beta1.AllocateResponse, error) {
+func (s *Server) Allocate(_ context.Context, req *v1beta1.AllocateRequest) (*v1beta1.AllocateResponse, error) {
 	s.logger.Info("allocate request", zap.Any("req", *req))
 	resps := make([]*v1beta1.ContainerAllocateResponse, len(req.ContainerRequests))
 	for i, containerReq := range req.ContainerRequests {
@@ -93,7 +97,7 @@ func (s *server) Allocate(ctx context.Context, req *v1beta1.AllocateRequest) (*v
 	return r, nil
 }
 
-func (s *server) ListAndWatch(_ *v1beta1.Empty, stream v1beta1.DevicePlugin_ListAndWatchServer) error {
+func (s *Server) ListAndWatch(_ *v1beta1.Empty, stream v1beta1.DevicePlugin_ListAndWatchServer) error {
 	// send the initial count right away
 	advertisedCount := s.deviceCounter.getDeviceCount()
 	devices := make([]*v1beta1.Device, advertisedCount)
@@ -136,14 +140,14 @@ func (s *server) ListAndWatch(_ *v1beta1.Empty, stream v1beta1.DevicePlugin_List
 	}
 }
 
-func (s *server) GetDevicePluginOptions(context.Context, *v1beta1.Empty) (*v1beta1.DevicePluginOptions, error) {
+func (s *Server) GetDevicePluginOptions(context.Context, *v1beta1.Empty) (*v1beta1.DevicePluginOptions, error) {
 	return &v1beta1.DevicePluginOptions{}, nil
 }
 
-func (s *server) GetPreferredAllocation(context.Context, *v1beta1.PreferredAllocationRequest) (*v1beta1.PreferredAllocationResponse, error) {
+func (s *Server) GetPreferredAllocation(context.Context, *v1beta1.PreferredAllocationRequest) (*v1beta1.PreferredAllocationResponse, error) {
 	return &v1beta1.PreferredAllocationResponse{}, nil
 }
 
-func (s *server) PreStartContainer(context.Context, *v1beta1.PreStartContainerRequest) (*v1beta1.PreStartContainerResponse, error) {
+func (s *Server) PreStartContainer(context.Context, *v1beta1.PreStartContainerRequest) (*v1beta1.PreStartContainerResponse, error) {
 	return &v1beta1.PreStartContainerResponse{}, nil
 }
