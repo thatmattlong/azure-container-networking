@@ -61,7 +61,7 @@ func (p *Plugin) run(ctx context.Context) error {
 	defer cancel()
 
 	s := NewServer(p.Socket, p.Logger, p, p.deviceCheckInterval)
-	runErrChan := make(chan error, ErrorChanCapacity)
+	runErrChan := make(chan error, 2) //nolint:gomnd // disabled in favor of readability
 	go func(errChan chan error) {
 		if err := s.Run(childCtx); err != nil {
 			errChan <- err
@@ -69,7 +69,7 @@ func (p *Plugin) run(ctx context.Context) error {
 	}(runErrChan)
 
 	// wait till the server is ready before registering with kubelet
-	readyErrChan := make(chan error, ErrorChanCapacity)
+	readyErrChan := make(chan error, 2) //nolint:gomnd // disabled in favor of readability
 	go func(errChan chan error) {
 		errChan <- s.Ready(childCtx)
 	}(readyErrChan)

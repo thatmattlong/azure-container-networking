@@ -13,8 +13,6 @@ import (
 	"k8s.io/kubelet/pkg/apis/deviceplugin/v1beta1"
 )
 
-const ErrorChanCapacity = 2
-
 type deviceCounter interface {
 	getDeviceCount() int
 }
@@ -47,7 +45,7 @@ func (s *Server) Run(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "error listening on socket")
 	}
-	errChan := make(chan error, ErrorChanCapacity)
+	errChan := make(chan error, 2) //nolint:gomnd // disabled in favor of readability
 	go func() {
 		errChan <- grpcServer.Serve(l)
 	}()

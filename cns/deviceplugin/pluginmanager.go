@@ -18,9 +18,8 @@ import (
 var ErrUnknownDeviceType = errors.New("unknown device type")
 
 const (
-	defaultDevicePluginDirectory      = "/var/lib/kubelet/device-plugins"
-	defaultDeviceCheckInterval        = 5 * time.Second
-	defaultServerCountForDevicePlugin = 2 // Number of device types supported
+	defaultDevicePluginDirectory = "/var/lib/kubelet/device-plugins"
+	defaultDeviceCheckInterval   = 5 * time.Second
 )
 
 type pluginManagerOptions struct {
@@ -89,7 +88,7 @@ func (p *PluginManager) Run(ctx context.Context) error {
 	}
 
 	var wg sync.WaitGroup
-	wg.Add(defaultServerCountForDevicePlugin) // starting two goroutines to wait on
+	wg.Add(2) //nolint:gomnd // starting two goroutines to wait on
 	go func() {
 		defer wg.Done()
 		p.VnetNICPlugin.Run(ctx)

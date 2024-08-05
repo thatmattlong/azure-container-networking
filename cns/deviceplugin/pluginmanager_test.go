@@ -98,19 +98,19 @@ func TestPluginManagerStartStop(t *testing.T) {
 	}
 
 	// call getDevicePluginOptions method
-	_, err = getDevicePluginOptionsResponse(t, vnetPluginEndpoint)
+	_, err = getDevicePluginOptionsResponse(vnetPluginEndpoint)
 	if err != nil {
 		t.Fatalf("error calling getDevicePluginOptions: %v", err)
 	}
 
 	// call getPreferredAllocation method
-	_, err = getPreferredAllocationResponse(t, vnetPluginEndpoint)
+	_, err = getPreferredAllocationResponse(vnetPluginEndpoint)
 	if err != nil {
 		t.Fatalf("error calling getPreferredAllocation: %v", err)
 	}
 
 	// call preStartContainer method
-	_, err = getPreStartContainerResponse(t, vnetPluginEndpoint)
+	_, err = getPreStartContainerResponse(vnetPluginEndpoint)
 	if err != nil {
 		t.Fatalf("error calling PreStartContainer: %v", err)
 	}
@@ -231,7 +231,7 @@ func getAllocateResponse(t *testing.T, pluginAddress string, req *v1beta1.Alloca
 }
 
 //nolint:staticcheck // TODO: Move to grpc.NewClient method
-func getDevicePluginOptionsResponse(t *testing.T, pluginAddress string) (*v1beta1.DevicePluginOptions, error) {
+func getDevicePluginOptionsResponse(pluginAddress string) (*v1beta1.DevicePluginOptions, error) {
 	conn, err := grpc.Dial(pluginAddress, grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithContextDialer(func(ctx context.Context, addr string) (net.Conn, error) {
 			d := &net.Dialer{}
@@ -242,7 +242,7 @@ func getDevicePluginOptionsResponse(t *testing.T, pluginAddress string) (*v1beta
 			return conn, nil
 		}))
 	if err != nil {
-		t.Fatalf("error connecting to fake kubelet: %v", err)
+		return nil, errors.Wrap(err, "error connecting to fake kubelet")
 	}
 	defer conn.Close()
 
@@ -255,7 +255,7 @@ func getDevicePluginOptionsResponse(t *testing.T, pluginAddress string) (*v1beta
 }
 
 //nolint:staticcheck // TODO: Move to grpc.NewClient method
-func getPreferredAllocationResponse(t *testing.T, pluginAddress string) (*v1beta1.PreferredAllocationResponse, error) {
+func getPreferredAllocationResponse(pluginAddress string) (*v1beta1.PreferredAllocationResponse, error) {
 	conn, err := grpc.Dial(pluginAddress, grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithContextDialer(func(ctx context.Context, addr string) (net.Conn, error) {
 			d := &net.Dialer{}
@@ -266,7 +266,7 @@ func getPreferredAllocationResponse(t *testing.T, pluginAddress string) (*v1beta
 			return conn, nil
 		}))
 	if err != nil {
-		t.Fatalf("error connecting to fake kubelet: %v", err)
+		return nil, errors.Wrap(err, "error connecting to fake kubelet")
 	}
 	defer conn.Close()
 
@@ -279,7 +279,7 @@ func getPreferredAllocationResponse(t *testing.T, pluginAddress string) (*v1beta
 }
 
 //nolint:staticcheck // TODO: Move to grpc.NewClient method
-func getPreStartContainerResponse(t *testing.T, pluginAddress string) (*v1beta1.PreStartContainerResponse, error) {
+func getPreStartContainerResponse(pluginAddress string) (*v1beta1.PreStartContainerResponse, error) {
 	conn, err := grpc.Dial(pluginAddress, grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithContextDialer(func(ctx context.Context, addr string) (net.Conn, error) {
 			d := &net.Dialer{}
@@ -290,7 +290,7 @@ func getPreStartContainerResponse(t *testing.T, pluginAddress string) (*v1beta1.
 			return conn, nil
 		}))
 	if err != nil {
-		t.Fatalf("error connecting to fake kubelet: %v", err)
+		return nil, errors.Wrap(err, "error connecting to fake kubelet")
 	}
 	defer conn.Close()
 
