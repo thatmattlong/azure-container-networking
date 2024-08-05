@@ -67,7 +67,11 @@ func (s *Server) Run(ctx context.Context) error {
 func (s *Server) Ready(ctx context.Context) error {
 	c, err := grpc.DialContext(ctx, s.address, grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock(),
 		grpc.WithContextDialer(func(ctx context.Context, addr string) (net.Conn, error) {
-			return (&net.Dialer{}).DialContext(ctx, "unix", addr)
+			conn, err := (&net.Dialer{}).DialContext(ctx, "unix", addr)
+			if err != nil {
+				return nil, errors.Wrap(err, "failed to dial context")
+			}
+			return conn, nil
 		}),
 	)
 	if err != nil {

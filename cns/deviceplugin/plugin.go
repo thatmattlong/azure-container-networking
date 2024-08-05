@@ -101,7 +101,11 @@ func (p *Plugin) registerWithKubelet(ctx context.Context) error {
 	conn, err := grpc.Dial(p.kubeletSocket, grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithContextDialer(func(ctx context.Context, addr string) (net.Conn, error) {
 			d := &net.Dialer{}
-			return d.DialContext(ctx, "unix", addr)
+			conn, err := d.DialContext(ctx, "unix", addr)
+			if err != nil {
+				return nil, errors.Wrap(err, "failed to dial context")
+			}
+			return conn, nil
 		}))
 	if err != nil {
 		return errors.Wrap(err, "error connecting to kubelet")

@@ -181,7 +181,11 @@ func getDeviceCount(t *testing.T, pluginAddress string) int {
 	conn, err := grpc.Dial(pluginAddress, grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithContextDialer(func(ctx context.Context, addr string) (net.Conn, error) {
 			d := &net.Dialer{}
-			return d.DialContext(ctx, "unix", addr)
+			conn, err := d.DialContext(ctx, "unix", addr)
+			if err != nil {
+				return nil, errors.Wrap(err, "failed to dial context")
+			}
+			return conn, nil
 		}))
 	if err != nil {
 		t.Fatalf("error connecting to fake kubelet: %v", err)
@@ -207,7 +211,11 @@ func getAllocateResponse(t *testing.T, pluginAddress string, req *v1beta1.Alloca
 	conn, err := grpc.Dial(pluginAddress, grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithContextDialer(func(ctx context.Context, addr string) (net.Conn, error) {
 			d := &net.Dialer{}
-			return d.DialContext(ctx, "unix", addr)
+			conn, err := d.DialContext(ctx, "unix", addr)
+			if err != nil {
+				return nil, errors.Wrap(err, "failed to dial context")
+			}
+			return conn, nil
 		}))
 	if err != nil {
 		t.Fatalf("error connecting to fake kubelet: %v", err)
@@ -227,7 +235,11 @@ func getDevicePluginOptionsResponse(t *testing.T, pluginAddress string) (*v1beta
 	conn, err := grpc.Dial(pluginAddress, grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithContextDialer(func(ctx context.Context, addr string) (net.Conn, error) {
 			d := &net.Dialer{}
-			return d.DialContext(ctx, "unix", addr)
+			conn, err := d.DialContext(ctx, "unix", addr)
+			if err != nil {
+				return nil, errors.Wrap(err, "failed to dial context")
+			}
+			return conn, nil
 		}))
 	if err != nil {
 		t.Fatalf("error connecting to fake kubelet: %v", err)
@@ -247,7 +259,11 @@ func getPreferredAllocationResponse(t *testing.T, pluginAddress string) (*v1beta
 	conn, err := grpc.Dial(pluginAddress, grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithContextDialer(func(ctx context.Context, addr string) (net.Conn, error) {
 			d := &net.Dialer{}
-			return d.DialContext(ctx, "unix", addr)
+			conn, err := d.DialContext(ctx, "unix", addr)
+			if err != nil {
+				return nil, errors.Wrap(err, "failed to dial context")
+			}
+			return conn, nil
 		}))
 	if err != nil {
 		t.Fatalf("error connecting to fake kubelet: %v", err)
@@ -267,7 +283,11 @@ func getPreStartContainerResponse(t *testing.T, pluginAddress string) (*v1beta1.
 	conn, err := grpc.Dial(pluginAddress, grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithContextDialer(func(ctx context.Context, addr string) (net.Conn, error) {
 			d := &net.Dialer{}
-			return d.DialContext(ctx, "unix", addr)
+			conn, err := d.DialContext(ctx, "unix", addr)
+			if err != nil {
+				return nil, errors.Wrap(err, "failed to dial context")
+			}
+			return conn, nil
 		}))
 	if err != nil {
 		t.Fatalf("error connecting to fake kubelet: %v", err)
