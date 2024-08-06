@@ -242,7 +242,6 @@ func getAllocateResponse(t *testing.T, pluginAddress string, req *v1beta1.Alloca
 	return resp
 }
 
-//nolint:staticcheck // TODO: Move to grpc.NewClient method
 func getDevicePluginOptionsResponse(pluginAddress string) (*v1beta1.DevicePluginOptions, error) {
 	conn, err := grpc.Dial(pluginAddress, grpc.WithTransportCredentials(insecure.NewCredentials()), //nolint:staticcheck // TODO: Move to grpc.NewClient method
 		grpc.WithContextDialer(func(ctx context.Context, addr string) (net.Conn, error) {
@@ -266,7 +265,6 @@ func getDevicePluginOptionsResponse(pluginAddress string) (*v1beta1.DevicePlugin
 	return resp, nil
 }
 
-//nolint:staticcheck // TODO: Move to grpc.NewClient method
 func getPreferredAllocationResponse(pluginAddress string) (*v1beta1.PreferredAllocationResponse, error) {
 	conn, err := grpc.Dial(pluginAddress, grpc.WithTransportCredentials(insecure.NewCredentials()), //nolint:staticcheck // TODO: Move to grpc.NewClient method
 		grpc.WithContextDialer(func(ctx context.Context, addr string) (net.Conn, error) {
@@ -290,7 +288,6 @@ func getPreferredAllocationResponse(pluginAddress string) (*v1beta1.PreferredAll
 	return resp, nil
 }
 
-//nolint:staticcheck // TODO: Move to grpc.NewClient method
 func getPreStartContainerResponse(pluginAddress string) (*v1beta1.PreStartContainerResponse, error) {
 	conn, err := grpc.Dial(pluginAddress, grpc.WithTransportCredentials(insecure.NewCredentials()), //nolint:staticcheck // TODO: Move to grpc.NewClient method
 		grpc.WithContextDialer(func(ctx context.Context, addr string) (net.Conn, error) {
