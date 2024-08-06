@@ -60,10 +60,8 @@ func (s *Server) Run(ctx context.Context) error {
 }
 
 // Ready blocks until the server is ready
-//
-//nolint:staticcheck // TODO: Move to grpc.NewClient method
 func (s *Server) Ready(ctx context.Context) error {
-	c, err := grpc.DialContext(ctx, s.address, grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock(),
+	c, err := grpc.DialContext(ctx, s.address, grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock(), //nolint:staticcheck // TODO: Move to grpc.NewClient method
 		grpc.WithContextDialer(func(ctx context.Context, addr string) (net.Conn, error) {
 			conn, err := (&net.Dialer{}).DialContext(ctx, "unix", addr)
 			if err != nil {

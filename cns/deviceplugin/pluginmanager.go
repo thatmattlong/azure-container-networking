@@ -88,12 +88,13 @@ func (p *PluginManager) Run(ctx context.Context) error {
 	}
 
 	var wg sync.WaitGroup
-	wg.Add(2) //nolint:gomnd // starting two goroutines to wait on
+	wg.Add(1) //nolint:gomnd // starting two goroutines to wait on
 	go func() {
 		defer wg.Done()
 		p.VnetNICPlugin.Run(ctx)
 	}()
 
+	wg.Add(1) //nolint:gomnd // starting two goroutines to wait on
 	go func() {
 		defer wg.Done()
 		p.IBNICPlugin.Run(ctx)

@@ -10,6 +10,7 @@ import (
 
 	"github.com/Azure/azure-container-networking/cns/deviceplugin"
 	"github.com/Azure/azure-container-networking/crd/multitenancy/api/v1alpha1"
+	"github.com/avast/retry-go/v3"
 	"github.com/pkg/errors"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
@@ -73,14 +74,26 @@ func TestPluginManagerStartStop(t *testing.T) {
 		t.Fatalf("error tracking IB devices: %v", err)
 	}
 
-	<-time.After(3 * time.Second)
-	gotVnetNICCount = getDeviceCount(t, vnetPluginEndpoint)
-	if gotVnetNICCount != expectedVnetNICs {
-		t.Fatalf("expected %d vnet nics but got %d", expectedVnetNICs, gotVnetNICCount)
+	checkDeviceCounts := func() error {
+		gotVnetNICCount := getDeviceCount(t, vnetPluginEndpoint)
+		if gotVnetNICCount != expectedVnetNICs {
+			return errors.Errorf("expected %d vnet nics but got %d", expectedVnetNICs, gotVnetNICCount)
+		}
+		gotIBNICCount := getDeviceCount(t, ibPluginEndpoint)
+		if gotIBNICCount != expectedIBNICs {
+			return errors.Errorf("expected %d ib nics but got %d", expectedIBNICs, gotIBNICCount)
+		}
+		return nil
 	}
-	gotIBNICCount = getDeviceCount(t, ibPluginEndpoint)
-	if gotIBNICCount != expectedIBNICs {
-		t.Fatalf("expected %d ib nics but got %d", expectedIBNICs, gotIBNICCount)
+
+	deviceCountErr := retry.Do(
+		checkDeviceCounts,
+		retry.Attempts(6),
+		retry.Delay(500*time.Millisecond),
+	)
+
+	if deviceCountErr != nil {
+		t.Fatalf("failed to verify device counts: %v", err)
 	}
 
 	// call allocate method and check the response
@@ -176,9 +189,8 @@ func runFakeKubelet(ctx context.Context, address string, vnetPluginRegisterChan,
 	return nil
 }
 
-//nolint:staticcheck // TODO: Move to grpc.NewClient method
 func getDeviceCount(t *testing.T, pluginAddress string) int {
-	conn, err := grpc.Dial(pluginAddress, grpc.WithTransportCredentials(insecure.NewCredentials()),
+	conn, err := grpc.Dial(pluginAddress, grpc.WithTransportCredentials(insecure.NewCredentials()), //nolint:staticcheck // TODO: Move to grpc.NewClient method
 		grpc.WithContextDialer(func(ctx context.Context, addr string) (net.Conn, error) {
 			d := &net.Dialer{}
 			conn, err := d.DialContext(ctx, "unix", addr)
@@ -206,9 +218,9 @@ func getDeviceCount(t *testing.T, pluginAddress string) int {
 	return len(resp.Devices)
 }
 
-//nolint:staticcheck // TODO: Move to grpc.NewClient method
 func getAllocateResponse(t *testing.T, pluginAddress string, req *v1beta1.AllocateRequest) *v1beta1.AllocateResponse {
-	conn, err := grpc.Dial(pluginAddress, grpc.WithTransportCredentials(insecure.NewCredentials()),
+	conn, err := grpc.Dial(pluginAddress, grpc.WithTransportCredentials(insecure.NewCredentials()), //nolint:staticcheck // TODO: Move to grpc.NewClient method
+
 		grpc.WithContextDialer(func(ctx context.Context, addr string) (net.Conn, error) {
 			d := &net.Dialer{}
 			conn, err := d.DialContext(ctx, "unix", addr)
@@ -232,7 +244,7 @@ func getAllocateResponse(t *testing.T, pluginAddress string, req *v1beta1.Alloca
 
 //nolint:staticcheck // TODO: Move to grpc.NewClient method
 func getDevicePluginOptionsResponse(pluginAddress string) (*v1beta1.DevicePluginOptions, error) {
-	conn, err := grpc.Dial(pluginAddress, grpc.WithTransportCredentials(insecure.NewCredentials()),
+	conn, err := grpc.Dial(pluginAddress, grpc.WithTransportCredentials(insecure.NewCredentials()), //nolint:staticcheck // TODO: Move to grpc.NewClient method
 		grpc.WithContextDialer(func(ctx context.Context, addr string) (net.Conn, error) {
 			d := &net.Dialer{}
 			conn, err := d.DialContext(ctx, "unix", addr)
@@ -256,7 +268,7 @@ func getDevicePluginOptionsResponse(pluginAddress string) (*v1beta1.DevicePlugin
 
 //nolint:staticcheck // TODO: Move to grpc.NewClient method
 func getPreferredAllocationResponse(pluginAddress string) (*v1beta1.PreferredAllocationResponse, error) {
-	conn, err := grpc.Dial(pluginAddress, grpc.WithTransportCredentials(insecure.NewCredentials()),
+	conn, err := grpc.Dial(pluginAddress, grpc.WithTransportCredentials(insecure.NewCredentials()), //nolint:staticcheck // TODO: Move to grpc.NewClient method
 		grpc.WithContextDialer(func(ctx context.Context, addr string) (net.Conn, error) {
 			d := &net.Dialer{}
 			conn, err := d.DialContext(ctx, "unix", addr)
@@ -280,7 +292,7 @@ func getPreferredAllocationResponse(pluginAddress string) (*v1beta1.PreferredAll
 
 //nolint:staticcheck // TODO: Move to grpc.NewClient method
 func getPreStartContainerResponse(pluginAddress string) (*v1beta1.PreStartContainerResponse, error) {
-	conn, err := grpc.Dial(pluginAddress, grpc.WithTransportCredentials(insecure.NewCredentials()),
+	conn, err := grpc.Dial(pluginAddress, grpc.WithTransportCredentials(insecure.NewCredentials()), //nolint:staticcheck // TODO: Move to grpc.NewClient method
 		grpc.WithContextDialer(func(ctx context.Context, addr string) (net.Conn, error) {
 			d := &net.Dialer{}
 			conn, err := d.DialContext(ctx, "unix", addr)

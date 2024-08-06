@@ -96,9 +96,8 @@ func (p *Plugin) run(ctx context.Context) error {
 	return nil
 }
 
-//nolint:staticcheck // TODO: Move to grpc.NewClient method
 func (p *Plugin) registerWithKubelet(ctx context.Context) error {
-	conn, err := grpc.Dial(p.kubeletSocket, grpc.WithTransportCredentials(insecure.NewCredentials()),
+	conn, err := grpc.Dial(p.kubeletSocket, grpc.WithTransportCredentials(insecure.NewCredentials()), //nolint:staticcheck // TODO: Move to grpc.NewClient method
 		grpc.WithContextDialer(func(ctx context.Context, addr string) (net.Conn, error) {
 			d := &net.Dialer{}
 			conn, err := d.DialContext(ctx, "unix", addr)
