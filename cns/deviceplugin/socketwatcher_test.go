@@ -3,6 +3,7 @@ package deviceplugin_test
 import (
 	"context"
 	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -38,16 +39,17 @@ func TestWatchContextCancelled(t *testing.T) {
 }
 
 func TestWatchSocketDeleted(t *testing.T) {
-	socket := "testdata/to-be-deleted.sock"
+	// Create a temporary directory
+	tempDir, err := os.MkdirTemp("", "socket-watcher-test-")
+	if err != nil {
+		t.Fatalf("error creating temporary directory: %v", err)
+	}
+	defer os.RemoveAll(tempDir) // Ensure the directory is cleaned up
+
+	socket := filepath.Join(tempDir, "to-be-deleted.sock")
 	if _, err := os.Create(socket); err != nil {
 		t.Fatalf("error creating test file %s: %v", socket, err)
 	}
-
-	defer func() {
-		if err := os.Remove(socket); err != nil && !os.IsNotExist(err) {
-			t.Fatalf("failed to remove socket")
-		}
-	}()
 
 	logger, _ := zap.NewDevelopment()
 	s := deviceplugin.NewSocketWatcher(logger, deviceplugin.SocketWatcherStatInterval(time.Second))
@@ -77,16 +79,17 @@ func TestWatchSocketDeleted(t *testing.T) {
 }
 
 func TestWatchSocketTwice(t *testing.T) {
-	socket := "testdata/to-be-deleted.sock"
+	// Create a temporary directory
+	tempDir, err := os.MkdirTemp("", "socket-watcher-test-")
+	if err != nil {
+		t.Fatalf("error creating temporary directory: %v", err)
+	}
+	defer os.RemoveAll(tempDir) // Ensure the directory is cleaned up
+
+	socket := filepath.Join(tempDir, "to-be-deleted.sock")
 	if _, err := os.Create(socket); err != nil {
 		t.Fatalf("error creating test file %s: %v", socket, err)
 	}
-
-	defer func() {
-		if err := os.Remove(socket); err != nil && !os.IsNotExist(err) {
-			t.Fatalf("failed to remove socket")
-		}
-	}()
 
 	logger, _ := zap.NewDevelopment()
 	s := deviceplugin.NewSocketWatcher(logger, deviceplugin.SocketWatcherStatInterval(time.Second))
