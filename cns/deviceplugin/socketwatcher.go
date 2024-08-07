@@ -58,6 +58,7 @@ func (s *SocketWatcher) WatchSocket(ctx context.Context, socket string) <-chan s
 	go func() {
 		defer close(socketChan)
 		ticker := time.NewTicker(s.options.statInterval)
+		defer ticker.Stop()
 		for {
 			select {
 			case <-ctx.Done():
