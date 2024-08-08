@@ -1165,12 +1165,8 @@ func main() {
 	logger.Close()
 }
 
-type PluginManagerInterface interface {
-	TrackDevices(deviceType mtv1alpha1.DeviceType, count int) error
-}
-
 // Poll CRD until it's set and update PluginManager
-func pollNodeInfoCRDAndUpdatePlugin(ctx context.Context, zlog *zap.Logger, pluginManager PluginManagerInterface) error {
+func pollNodeInfoCRDAndUpdatePlugin(ctx context.Context, zlog *zap.Logger, pluginManager *deviceplugin.PluginManager) error {
 	kubeConfig, err := ctrl.GetConfig()
 	if err != nil {
 		logger.Errorf("Failed to get kubeconfig for request controller: %v", err)
