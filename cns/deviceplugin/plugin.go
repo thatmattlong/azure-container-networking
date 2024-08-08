@@ -132,8 +132,8 @@ func (p *Plugin) mustCleanUp() {
 
 func (p *Plugin) UpdateDeviceCount(count int) {
 	p.deviceCountMutex.Lock()
-	defer p.deviceCountMutex.Unlock()
 	p.deviceCount = count
+	p.deviceCountMutex.Unlock()
 }
 
 func (p *Plugin) getDeviceCount() int {
