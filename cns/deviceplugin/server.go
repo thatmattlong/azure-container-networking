@@ -79,7 +79,7 @@ func (s *Server) Ready(ctx context.Context) error {
 	return nil
 }
 
-func (s *Server) Allocate(_ context.Context, req *v1beta1.AllocateRequest) (*v1beta1.AllocateResponse, error) {
+func (s *Server) Allocate(req *v1beta1.AllocateRequest) (*v1beta1.AllocateResponse, error) {
 	s.logger.Info("allocate request", zap.Any("req", *req))
 	resps := make([]*v1beta1.ContainerAllocateResponse, len(req.ContainerRequests))
 	for i, containerReq := range req.ContainerRequests {
