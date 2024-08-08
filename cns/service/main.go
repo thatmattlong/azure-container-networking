@@ -1176,7 +1176,7 @@ func pollNodeInfoCRDAndUpdatePlugin(ctx context.Context, zlog *zap.Logger, plugi
 		logger.Errorf("Failed to get kubeconfig for request controller: %v", err)
 		return errors.Wrap(err, "failed to get kubeconfig")
 	}
-	kubeConfig.UserAgent = fmt.Sprintf("azure-cns-%s", version)
+	kubeConfig.UserAgent = "azure-cns-" + version
 
 	clientset, err := kubernetes.NewForConfig(kubeConfig)
 	if err != nil {
