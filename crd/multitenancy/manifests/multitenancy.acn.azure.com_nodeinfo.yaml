@@ -46,8 +46,7 @@ spec:
             description: NodeInfoSpec defines the desired state of NodeInfo
             properties:
               homeAZ:
-                pattern: ^AZ\d{2}$
-                type: string
+                type: integer
               vmUniqueID:
                 type: string
             type: object

@@ -37,8 +37,7 @@ type NodeInfoSpec struct {
 	// +kubebuilder:validation:Optional
 	VMUniqueID string `json:"vmUniqueID,omitempty"`
 	// +kubebuilder:validation:optional
-	// +kubebuilder:validation:Pattern=`^AZ\d{2}$`
-	HomeAZ string `json:"homeAZ,omitempty"`
+	HomeAZ int `json:"homeAZ,omitempty"`
 }
 
 // NodeInfoStatus defines the observed state of NodeInfo
