@@ -45,6 +45,9 @@ spec:
           spec:
             description: NodeInfoSpec defines the desired state of NodeInfo
             properties:
+              homeAZ:
+                pattern: ^AZ\d{2}$
+                type: string
               vmUniqueID:
                 type: string
             type: object
@@ -58,9 +61,6 @@ spec:
                       enum:
                       - acn.azure.com/vnet-nic
                       - acn.azure.com/infiniband-nic
-                      type: string
-                    homeAZ:
-                      pattern: ^AZ\d{2}$
                       type: string
                     macAddress:
                       type: string
